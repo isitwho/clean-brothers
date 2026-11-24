@@ -21,7 +21,7 @@ export function BeforeAfterSlider({
   splitSrc,
   className = "",
 }: BeforeAfterSliderProps) {
-  const [position, setPosition] = useState(52);
+  const [position, setPosition] = useState(50);
   const id = useId();
   const hasSplit = Boolean(splitSrc);
 
@@ -31,28 +31,31 @@ export function BeforeAfterSlider({
   return (
     <div className={`compare ${className}`}>
       <div className="compare__frame">
-        {beforeImage ? (
+        {afterImage ? (
           <img
-            src={beforeImage}
-            alt={`${title} ${beforeLabel}`}
-            className={hasSplit ? "compare__image compare__image--left" : "compare__image"}
+            src={afterImage}
+            alt={`${title} ${afterLabel}`}
+            className={hasSplit ? "compare__image compare__image--right" : "compare__image"}
           />
         ) : null}
-        {afterImage ? (
-          <div className="compare__after" style={{ width: `${position}%` }}>
+        {beforeImage ? (
+          <div
+            className="compare__before"
+            style={{ clipPath: `inset(0 ${100 - position}% 0 0)` }}
+          >
             <img
-              src={afterImage}
-              alt={`${title} ${afterLabel}`}
+              src={beforeImage}
+              alt={`${title} ${beforeLabel}`}
               className={
                 hasSplit
-                  ? "compare__image compare__image--right"
+                  ? "compare__image compare__image--left"
                   : "compare__image"
               }
             />
           </div>
         ) : null}
-        <div className="compare__shade compare__shade--after">{afterLabel}</div>
         <div className="compare__shade compare__shade--before">{beforeLabel}</div>
+        <div className="compare__shade compare__shade--after">{afterLabel}</div>
         <div className="compare__handle" style={{ left: `${position}%` }} />
         <input
           id={id}
@@ -62,6 +65,7 @@ export function BeforeAfterSlider({
           min="0"
           max="100"
           value={position}
+          aria-valuetext={`왼쪽 ${beforeLabel} ${position}%, 오른쪽 ${afterLabel} ${100 - position}%`}
           onChange={(event) => setPosition(Number(event.target.value))}
         />
       </div>

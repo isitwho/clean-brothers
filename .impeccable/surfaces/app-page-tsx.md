@@ -21,7 +21,7 @@ related_targets: ["app/globals.css","components/BeforeAfterSlider.tsx"]
 - 기존 포트폴리오 이미지, 후기, 서비스 범위, 전화번호와 블로그 링크를 사용한다.
 - 확인되지 않은 가격, 고객사, 수상, 성과 수치는 만들지 않는다.
 - 기존 섹션 앵커와 `/admin` 경로를 유지한다.
-- 비교 슬라이더는 After를 왼쪽, Before를 오른쪽에 배치한다.
+- 비교 슬라이더는 Before를 왼쪽, After를 오른쪽에 배치하며 이미지 크기는 고정한다.
 
 ## Chosen direction
 

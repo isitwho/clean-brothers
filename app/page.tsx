@@ -1,4 +1,7 @@
 import { BeforeAfterSlider } from "../components/BeforeAfterSlider";
+import { FooterLinks } from "../components/FooterLinks";
+import { ContactLink } from "../components/ContactLink";
+import { RatingStars } from "../components/RatingStars";
 import { listPortfolioItems, listReviews } from "../lib/content";
 
 const services = [
@@ -32,7 +35,14 @@ export default async function Home() {
     <main className="site-shell">
       <header className="topbar" aria-label="주요 안내">
         <a className="brand-mark" href="#top" aria-label="클린브라더스 홈">
-          <span>클린</span>브라더스
+          <img
+            className="brand-mark__logo"
+            src="/assets/clean-brothers-logo.png"
+            alt=""
+            width="40"
+            height="40"
+          />
+          <span className="brand-mark__name"><span>클린</span>브라더스</span>
         </a>
         <nav className="nav-links" aria-label="사이트 메뉴">
           <a href="#portfolio">작업 결과</a>
@@ -40,9 +50,7 @@ export default async function Home() {
           <a href="#reviews">후기</a>
           <a href="/admin">관리</a>
         </nav>
-        <a className="call-button" href="tel:050895959163">
-          전화 상담
-        </a>
+        <ContactLink className="call-button" label="전화 상담" />
       </header>
 
       <section id="top" className="hero">
@@ -56,23 +64,30 @@ export default async function Home() {
             <a className="primary-button" href="#portfolio">
               작업 결과 보기
             </a>
-            <a className="secondary-button" href="tel:050895959163">
-              0508-9595-9163
-            </a>
+            <ContactLink className="secondary-button" label="0508-9595-9163" />
           </div>
         </div>
 
         <div className="hero__visual" aria-label="대표 전후 포트폴리오">
-          <BeforeAfterSlider
-            title={heroItem.title}
-            beforeSrc={heroItem.beforeSrc}
-            afterSrc={heroItem.afterSrc}
-            splitSrc={heroItem.splitSrc}
-          />
-          <div className="hero__caption">
-            <span>{heroItem.category}</span>
-            <strong>{heroItem.title}</strong>
-          </div>
+          {heroItem ? (
+            <>
+              <BeforeAfterSlider
+                title={heroItem.title}
+                beforeSrc={heroItem.beforeSrc}
+                afterSrc={heroItem.afterSrc}
+                splitSrc={heroItem.splitSrc}
+              />
+              <div className="hero__caption">
+                <span>{heroItem.category}</span>
+                <strong>{heroItem.title}</strong>
+              </div>
+            </>
+          ) : (
+            <div className="content-empty content-empty--hero">
+              <strong>새 작업 결과를 준비하고 있습니다.</strong>
+              <span>상담은 지금도 정상적으로 가능합니다.</span>
+            </div>
+          )}
         </div>
       </section>
 
@@ -97,10 +112,10 @@ export default async function Home() {
       <section id="portfolio" className="portfolio section-shell">
         <div className="section-heading">
           <h2>직접 움직여 확인하는 작업 결과</h2>
-          <p>슬라이더를 좌우로 움직이면 작업 후와 작업 전을 비교할 수 있습니다.</p>
+          <p>슬라이더를 좌우로 움직이면 작업 전과 작업 후를 비교할 수 있습니다.</p>
         </div>
         <div className="portfolio-grid">
-          {portfolio.map((item, index) => (
+          {portfolio.length ? portfolio.map((item, index) => (
             <article className={`portfolio-card portfolio-card--${index + 1}`} key={item.id}>
               <BeforeAfterSlider
                 title={item.title}
@@ -117,7 +132,7 @@ export default async function Home() {
                 <p>{item.summary}</p>
               </div>
             </article>
-          ))}
+          )) : <p className="content-empty">등록된 작업 결과가 없습니다.</p>}
         </div>
       </section>
 
@@ -153,15 +168,15 @@ export default async function Home() {
           <h2>작업을 경험한 고객의 말</h2>
         </div>
         <div className="review-grid">
-          {reviews.map((review) => (
+          {reviews.length ? reviews.map((review) => (
             <figure className="review-card" key={review.id}>
               <blockquote>“{review.content}”</blockquote>
               <figcaption>
                 <strong>{review.author}</strong>
-                <span>평점 {review.rating.toFixed(1)}</span>
+                <RatingStars rating={review.rating} />
               </figcaption>
             </figure>
-          ))}
+          )) : <p className="content-empty">등록된 고객 후기가 없습니다.</p>}
         </div>
       </section>
 
@@ -170,9 +185,7 @@ export default async function Home() {
           <h2>청소가 필요한 공간을 알려주세요.</h2>
           <p>현장 상태와 필요한 범위를 확인한 뒤 견적을 안내합니다.</p>
         </div>
-        <a className="primary-button" href="tel:050895959163">
-          전화 상담
-        </a>
+        <ContactLink className="primary-button" label="전화 상담" />
       </section>
 
       <footer className="footer section-shell">
@@ -181,10 +194,7 @@ export default async function Home() {
           <p>서울특별시 강동구 구천면로64길 9-9</p>
           <p>입주청소 / 이사청소</p>
         </div>
-        <div className="footer__links">
-          <a href="https://blog.naver.com/cleanbrothers2">네이버 블로그</a>
-          <a href="tel:050895959163">0508-9595-9163</a>
-        </div>
+        <FooterLinks />
       </footer>
     </main>
   );

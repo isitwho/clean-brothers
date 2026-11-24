@@ -18,6 +18,8 @@ export const portfolioItems = sqliteTable(
     summary: text("summary").notNull(),
     beforeKey: text("before_key").notNull(),
     afterKey: text("after_key").notNull(),
+    splitSrc: text("split_src").notNull().default(""),
+    sortOrder: integer("sort_order").notNull().default(0),
     createdAt: integer("created_at", { mode: "timestamp_ms" })
       .notNull()
       .default(sql`(unixepoch() * 1000)`),
@@ -39,9 +41,23 @@ export const reviews = sqliteTable(
     sourceType: text("source_type", { enum: ["manual", "daangn"] })
       .notNull()
       .default("manual"),
+    sortOrder: integer("sort_order").notNull().default(0),
     createdAt: integer("created_at", { mode: "timestamp_ms" })
       .notNull()
       .default(sql`(unixepoch() * 1000)`),
   },
   (table) => [index("reviews_created_at_idx").on(table.createdAt)],
 );
+
+export const siteSettings = sqliteTable("site_settings", {
+  id: text("id").primaryKey(),
+  featuredReviewId: text("featured_review_id").notNull().default(""),
+  randomReview: integer("random_review", { mode: "boolean" }).notNull().default(false),
+});
+
+export const adminSettings = sqliteTable("admin_settings", {
+  id: text("id").primaryKey(),
+  pinHash: text("pin_hash").notNull(),
+  pinSalt: text("pin_salt").notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+});

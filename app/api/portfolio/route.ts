@@ -1,6 +1,8 @@
 import {
   createPortfolioItem,
+  deletePortfolioItem,
   listPortfolioItems,
+  updatePortfolioItem,
   verifyAdminRequest,
 } from "../../../lib/content";
 
@@ -11,9 +13,30 @@ export async function GET() {
   return Response.json({ portfolio });
 }
 
+export async function PUT(request: Request) {
+  try {
+    await verifyAdminRequest(request);
+    const item = await updatePortfolioItem(await request.formData());
+    return Response.json({ item });
+  } catch (error) {
+    return Response.json({ error: errorMessage(error) }, { status: 400 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    await verifyAdminRequest(request);
+    const { id } = (await request.json()) as { id?: string };
+    await deletePortfolioItem(id);
+    return Response.json({ ok: true });
+  } catch (error) {
+    return Response.json({ error: errorMessage(error) }, { status: 400 });
+  }
+}
+
 export async function POST(request: Request) {
   try {
-    verifyAdminRequest(request);
+    await verifyAdminRequest(request);
     const item = await createPortfolioItem(await request.formData());
     return Response.json({ item }, { status: 201 });
   } catch (error) {

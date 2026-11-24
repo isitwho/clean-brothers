@@ -43,9 +43,9 @@
     {
       "name": "Before After Frame",
       "kind": "custom",
-      "description": "The signature proof component with After on the left and Before on the right.",
-      "html": "<div class=\"ds-compare\"><span class=\"ds-after\">작업 후</span><span class=\"ds-before\">작업 전</span></div>",
-      "css": ".ds-compare{position:relative;aspect-ratio:16/11;border-radius:16px;background:linear-gradient(90deg,#dfe8ff 0 52%,#cbd2dc 52%);box-shadow:0 28px 70px rgba(35,48,73,.16)}.ds-after,.ds-before{position:absolute;top:14px;padding:9px 11px;border-radius:10px;font:800 12px 'Gothic A1',sans-serif}.ds-after{left:14px;background:#1f5cff;color:#fff}.ds-before{right:14px;background:#111a2c;color:#eef1f4}"
+      "description": "The signature proof component with Before on the left and After on the right, using fixed-size image layers.",
+      "html": "<div class=\"ds-compare\"><span class=\"ds-before\">작업 전</span><span class=\"ds-after\">작업 후</span></div>",
+      "css": ".ds-compare{position:relative;aspect-ratio:16/11;border-radius:16px;background:linear-gradient(90deg,#cbd2dc 0 50%,#dfe8ff 50%);box-shadow:0 28px 70px rgba(35,48,73,.16)}.ds-after,.ds-before{position:absolute;top:14px;padding:9px 11px;border-radius:10px;font:800 12px 'Gothic A1',sans-serif}.ds-before{left:14px;background:#111a2c;color:#eef1f4}.ds-after{right:14px;background:#1f5cff;color:#fff}"
     }
   ],
   "narrative": {
