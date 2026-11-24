@@ -8,6 +8,8 @@
   "scripts": {
     "dev": "vinext dev",
     "build": "vinext build",
+    "deploy": "pnpm run build && wrangler deploy",
+    "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
     "start": "vinext start",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate"

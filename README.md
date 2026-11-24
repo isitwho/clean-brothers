@@ -40,3 +40,16 @@ ADMIN_PIN=replace-with-a-private-admin-code
 ```bash
 pnpm run db:generate
 ```
+
+## Cloudflare 직접 배포
+
+ChatGPT Sites와 독립적으로 Cloudflare Workers에 배포합니다.
+
+1. `pnpm exec wrangler login`으로 배포 계정에 로그인합니다.
+2. `pnpm exec wrangler d1 create clean-brothers-db`를 실행하고 반환된 database_id를 `wrangler.jsonc`의 자리표시자에 넣습니다.
+3. `pnpm exec wrangler r2 bucket create clean-brothers-images`로 이미지 버킷을 만듭니다.
+4. `pnpm run db:migrate:remote`로 스키마를 적용합니다.
+5. `pnpm exec wrangler secret put ADMIN_PIN`으로 운영 관리자 코드를 설정합니다.
+6. `pnpm run deploy`로 빌드하고 배포합니다.
+
+D1과 R2는 새 계정에 생성되므로 기존 Sites의 게시물·이미지는 자동으로 이전되지 않습니다.

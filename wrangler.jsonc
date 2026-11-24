@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "clean-brothers",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-05-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "assets": { "binding": "ASSETS" },
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "clean-brothers-db",
+    "database_id": "00000000-0000-4000-8000-000000000000",
+    "migrations_dir": "drizzle"
+  }],
+  "r2_buckets": [{
+    "binding": "PORTFOLIO_IMAGES",
+    "bucket_name": "clean-brothers-images"
+  }],
+  "images": { "binding": "IMAGES" },
+  "observability": { "enabled": true }
+}
