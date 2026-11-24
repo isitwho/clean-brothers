@@ -42,3 +42,8 @@ next-env.d.ts
 /.wrangler/
 /.vinext/
 /.codex-impeccable-inspect/
+
+*.db
+*.db-shm
+*.db-wal
+*.tsbuildinfo

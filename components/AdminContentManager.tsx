@@ -1,4 +1,5 @@
 "use client";
+import { uploadPortfolioImages } from "../lib/upload-images";
 
 import { ArrowDown, ArrowUp, Check, Pencil, Star, Trash2, X } from "lucide-react";
 import { FormEvent, useState } from "react";
@@ -102,6 +103,8 @@ export function AdminContentManager({
   async function savePortfolio(body: FormData) {
     setIsSaving(true);
     onMessage("포트폴리오 수정을 저장하는 중입니다.");
+    try { await uploadPortfolioImages(body, pin); }
+    catch (error) { setIsSaving(false); onMessage(error instanceof Error ? error.message : "사진 업로드에 실패했습니다."); return false; }
     const response = await fetch("/api/portfolio", {
       method: "PUT",
       headers: { "x-admin-pin": pin },

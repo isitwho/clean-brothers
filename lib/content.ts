@@ -1,4 +1,5 @@
-import { env } from "cloudflare:workers";
+import { database, type Database } from "./database";
+import { del, head } from "@vercel/blob";
 
 export type PortfolioItem = {
   id: string;
@@ -31,11 +32,6 @@ export type ReviewDisplaySettings = {
   randomReview: boolean;
 };
 
-type RuntimeEnv = {
-  DB?: D1Database;
-  PORTFOLIO_IMAGES?: R2Bucket;
-  ADMIN_PIN?: string;
-};
 
 type PortfolioRow = {
   id: string;
@@ -68,7 +64,7 @@ type ReviewDisplayRow = {
   random_review: number;
 };
 
-const runtimeEnv = env as unknown as RuntimeEnv;
+const runtimeEnv = { get DB() { return process.env.TURSO_DATABASE_URL ? database : undefined; }, get ADMIN_PIN() { return process.env.ADMIN_PIN; } };
 const demoAdminPin = "0215";
 const maxImageBytes = 10 * 1024 * 1024;
 
@@ -209,7 +205,6 @@ export async function listReviewsForAdmin(): Promise<{
 
 export async function createPortfolioItem(formData: FormData) {
   const db = requireDb();
-  const bucket = requireBucket();
   await ensureSchema(db);
 
   const title = requireText(formData, "title");
@@ -218,11 +213,11 @@ export async function createPortfolioItem(formData: FormData) {
   const completedAt =
     optionalText(formData, "completedAt") || new Date().toISOString().slice(0, 10);
   const summary = requireText(formData, "summary");
-  const before = requireImage(formData, "before");
-  const after = requireImage(formData, "after");
+  const before = await imageUrl(formData, "before", true);
+  const after = await imageUrl(formData, "after", true);
   const id = crypto.randomUUID();
-  const beforeKey = await putImage(bucket, before, `${id}-before`);
-  const afterKey = await putImage(bucket, after, `${id}-after`);
+  const beforeKey = before!;
+  const afterKey = after!;
   const now = Date.now();
 
   await db.batch([
@@ -261,7 +256,6 @@ export async function createPortfolioItem(formData: FormData) {
 
 export async function updatePortfolioItem(formData: FormData) {
   const db = requireDb();
-  const bucket = requireBucket();
   await ensureSchema(db);
 
   const id = requireText(formData, "id");
@@ -276,13 +270,13 @@ export async function updatePortfolioItem(formData: FormData) {
   const location = optionalText(formData, "location") || "서울 강동구";
   const completedAt = optionalText(formData, "completedAt") || new Date().toISOString().slice(0, 10);
   const summary = requireText(formData, "summary");
-  const before = optionalImage(formData, "before");
-  const after = optionalImage(formData, "after");
+  const before = await imageUrl(formData, "before");
+  const after = await imageUrl(formData, "after");
   if (existing.split_src && Boolean(before) !== Boolean(after)) {
     throw new Error("기본 비교 사진을 교체할 때는 작업 전/후 이미지를 모두 선택해 주세요.");
   }
-  const beforeKey = before ? await putImage(bucket, before, `${id}-before-${Date.now()}`) : existing.before_key;
-  const afterKey = after ? await putImage(bucket, after, `${id}-after-${Date.now()}`) : existing.after_key;
+  const beforeKey = before ? before : existing.before_key;
+  const afterKey = after ? after : existing.after_key;
   const splitSrc = before && after ? "" : existing.split_src;
 
   await db.prepare(
@@ -290,8 +284,8 @@ export async function updatePortfolioItem(formData: FormData) {
      summary = ?, before_key = ?, after_key = ?, split_src = ? WHERE id = ?`,
   ).bind(title, category, location, completedAt, summary, beforeKey, afterKey, splitSrc, id).run();
 
-  if (before && existing.before_key !== beforeKey) await bucket.delete(existing.before_key);
-  if (after && existing.after_key !== afterKey) await bucket.delete(existing.after_key);
+  if (before && existing.before_key !== beforeKey) await deleteImage(existing.before_key);
+  if (after && existing.after_key !== afterKey) await deleteImage(existing.after_key);
   return toPortfolioItem({ id, title, category, location, completed_at: completedAt, summary, before_key: beforeKey, after_key: afterKey, split_src: splitSrc, sort_order: existing.sort_order, created_at: existing.created_at });
 }
 
@@ -299,7 +293,6 @@ export async function deletePortfolioItem(idValue: unknown) {
   const id = cleanString(idValue);
   if (!id) throw new Error("삭제할 포트폴리오를 선택해 주세요.");
   const db = requireDb();
-  const bucket = requireBucket();
   await ensureSchema(db);
   const existing = await db.prepare("SELECT before_key, after_key FROM portfolio_items WHERE id = ?").bind(id).first<{ before_key: string; after_key: string }>();
   if (!existing) throw new Error("삭제할 포트폴리오를 찾지 못했습니다.");
@@ -307,7 +300,7 @@ export async function deletePortfolioItem(idValue: unknown) {
   await Promise.all(
     [existing.before_key, existing.after_key]
       .filter(Boolean)
-      .map((key) => bucket.delete(key)),
+      .map((key) => deleteImage(key)),
   );
 }
 
@@ -409,16 +402,6 @@ export async function updateReviewDisplaySettings(payload: unknown) {
   return { featuredReviewId, randomReview };
 }
 
-export async function getMedia(key: string) {
-  const safeKey = key.replace(/^\/+/, "");
-  if (!safeKey || safeKey.includes("..")) {
-    throw new Error("이미지 경로를 확인해 주세요.");
-  }
-
-  const object = await requireBucket().get(safeKey);
-  if (!object) return null;
-  return object;
-}
 
 export async function verifyAdminRequest(request: Request) {
   const incomingPin = request.headers.get("x-admin-pin")?.trim() ?? "";
@@ -436,9 +419,9 @@ export async function verifyAdminRequest(request: Request) {
     }
   }
 
-  const configuredPin = cleanString(runtimeEnv.ADMIN_PIN) || demoAdminPin;
+  const configuredPin = cleanString(runtimeEnv.ADMIN_PIN) || (process.env.NODE_ENV === "production" ? "" : demoAdminPin);
 
-  if (incomingPin !== configuredPin) {
+  if (!configuredPin || incomingPin !== configuredPin) {
     throw new Error("관리자 코드가 올바르지 않습니다.");
   }
 }
@@ -469,7 +452,7 @@ export async function updateAdminPin(payload: unknown) {
   ).bind(pinHash, salt, Date.now()).run();
 }
 
-async function ensureSchema(db: D1Database) {
+async function ensureSchema(db: Database) {
   await db.batch([
     db.prepare(
       `CREATE TABLE IF NOT EXISTS portfolio_items (
@@ -531,7 +514,7 @@ async function ensureSchema(db: D1Database) {
 }
 
 async function ensureColumn(
-  db: D1Database,
+  db: Database,
   table: "portfolio_items" | "reviews",
   column: string,
   definition: string,
@@ -541,7 +524,7 @@ async function ensureColumn(
   await db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`).run();
 }
 
-async function ensureSeedContent(db: D1Database) {
+async function ensureSeedContent(db: Database) {
   const seeded = await db.prepare(
     "SELECT id FROM site_settings WHERE id = 'seed_content_v1'",
   ).first<{ id: string }>();
@@ -598,7 +581,7 @@ const defaultReviewSettings: ReviewDisplaySettings = {
   randomReview: false,
 };
 
-async function getReviewDisplaySettings(db: D1Database) {
+async function getReviewDisplaySettings(db: Database) {
   const row = await db.prepare(
     "SELECT featured_review_id, random_review FROM site_settings WHERE id = 'review_display'",
   ).first<ReviewDisplayRow>();
@@ -609,17 +592,11 @@ async function getReviewDisplaySettings(db: D1Database) {
 
 function requireDb() {
   if (!runtimeEnv.DB) {
-    throw new Error("D1 데이터베이스 바인딩이 필요합니다.");
+    throw new Error("Turso 데이터베이스 연결이 필요합니다.");
   }
   return runtimeEnv.DB;
 }
 
-function requireBucket() {
-  if (!runtimeEnv.PORTFOLIO_IMAGES) {
-    throw new Error("R2 이미지 저장소 바인딩이 필요합니다.");
-  }
-  return runtimeEnv.PORTFOLIO_IMAGES;
-}
 
 function toPortfolioItem(row: PortfolioRow): PortfolioItem {
   return {
@@ -683,17 +660,6 @@ function hexToBytes(value: string) {
   return Uint8Array.from(value.match(/.{2}/g) ?? [], (pair) => Number.parseInt(pair, 16));
 }
 
-async function putImage(bucket: R2Bucket, file: File, stem: string) {
-  const extension = extensionFor(file.type);
-  const key = `portfolio/${stem}.${extension}`;
-  await bucket.put(key, await file.arrayBuffer(), {
-    httpMetadata: {
-      contentType: file.type,
-      cacheControl: "public, max-age=31536000, immutable",
-    },
-  });
-  return key;
-}
 
 function requireText(formData: FormData, key: string) {
   const value = optionalText(formData, key);
@@ -726,34 +692,18 @@ function reviewPayload(payload: unknown, requireId = false) {
   return { id, author, content, rating, source, sourceUrl, sourceType };
 }
 
-function requireImage(formData: FormData, key: string) {
-  const value = formData.get(key);
-  if (!(value instanceof File) || value.size === 0) {
-    throw new Error("작업 전/후 이미지를 모두 선택해 주세요.");
-  }
-  if (!["image/jpeg", "image/png", "image/webp"].includes(value.type)) {
-    throw new Error("이미지는 JPG, PNG, WebP만 업로드할 수 있습니다.");
-  }
-  if (value.size > maxImageBytes) {
-    throw new Error("이미지는 10MB 이하로 업로드해 주세요.");
-  }
+async function imageUrl(formData: FormData, key: string, required = false) {
+  const value = cleanString(formData.get(key));
+  if (!value && !required) return null;
+  if (!value) throw new Error("작업 전/후 이미지를 모두 선택해 주세요.");
+  const url = new URL(value);
+  const storeId = process.env.BLOB_READ_WRITE_TOKEN?.split("_")[3]?.toLowerCase();
+  if (!storeId || url.protocol !== "https:" || url.hostname !== storeId + ".public.blob.vercel-storage.com" || !url.pathname.startsWith("/portfolio/")) throw new Error("업로드한 이미지 경로가 올바르지 않습니다.");
+  const file = await head(value);
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.contentType) || file.size > maxImageBytes) throw new Error("이미지 형식 또는 크기를 확인해 주세요.");
   return value;
 }
-
-function optionalImage(formData: FormData, key: string) {
-  const value = formData.get(key);
-  if (!(value instanceof File) || value.size === 0) return null;
-  if (!["image/jpeg", "image/png", "image/webp"].includes(value.type)) throw new Error("이미지는 JPG, PNG, WebP만 업로드할 수 있습니다.");
-  if (value.size > maxImageBytes) throw new Error("이미지는 10MB 이하로 업로드해 주세요.");
-  return value;
+async function deleteImage(url: string) {
+  if (url.startsWith("https://")) await del(url);
 }
-
-function extensionFor(contentType: string) {
-  if (contentType === "image/png") return "png";
-  if (contentType === "image/webp") return "webp";
-  return "jpg";
-}
-
-function mediaPath(key: string) {
-  return `/api/media/${key}`;
-}
+function mediaPath(key: string) { return key; }

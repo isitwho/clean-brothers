@@ -1,4 +1,5 @@
 "use client";
+import { uploadPortfolioImages } from "../lib/upload-images";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -85,6 +86,8 @@ export function AdminDashboard() {
 
     setIsSaving(true);
     setMessage("포트폴리오를 게시하는 중입니다.");
+    try { await uploadPortfolioImages(body, pin); }
+    catch (error) { setIsSaving(false); setMessage(error instanceof Error ? error.message : "사진 업로드에 실패했습니다."); return ; }
     const response = await fetch("/api/portfolio", {
       method: "POST",
       headers: { "x-admin-pin": pin }, body,
